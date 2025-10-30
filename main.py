@@ -2,16 +2,14 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, filedialog
 import sqlite3
 import csv
-from datetime import datetime, UTC   # ✅ usamos UTC moderno
-import style  # 🔹 Estilos externos
+from datetime import datetime, UTC   
+import style  
 
 DB_FILENAME = "stock.db"
 LOW_STOCK_THRESHOLD = 5
 
 
-# ============================================================
-# BASE DE DATOS
-# ============================================================
+#Base de datos
 class Database:
     def __init__(self, db_filename=DB_FILENAME):
         self.conn = sqlite3.connect(db_filename)
@@ -132,11 +130,9 @@ class Database:
         return c.fetchall()
 
 
-# ============================================================
-# DIÁLOGOS
-# ============================================================
-# (todo igual que tu versión original, sin cambios)
-# ============================================================
+# Fin de base de datos
+
+# Dialogos
 
 class ProductDialog(simpledialog.Dialog):
     def __init__(self, parent, title, product=None):
@@ -210,9 +206,9 @@ class SaleDialog(simpledialog.Dialog):
 
 
 
-# ============================================================
-# APLICACIÓN PRINCIPAL
-# ============================================================
+# Fin de diálogos
+
+# Aplicación principal
 class StockApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -222,7 +218,7 @@ class StockApp(tk.Tk):
 
         self.db = Database()
 
-        # 🔹 Aplicar estilos visuales
+        
         style.apply_styles(self)
 
         self.create_widgets()
@@ -230,14 +226,14 @@ class StockApp(tk.Tk):
         self.check_low_stock()
 
     def create_widgets(self):
-        # --- Menú ---
+        # Menú 
         menubar = tk.Menu(self)
         menu_ver = tk.Menu(menubar, tearoff=0)
         menu_ver.add_command(label="Ver Egresos", command=self.show_egresos)
         menubar.add_cascade(label="Ver", menu=menu_ver)
         self.config(menu=menubar)
 
-        # --- Barra superior ---
+        #  Barra superior 
         top = tk.Frame(self, bg="#f4f6f7")
         top.pack(fill="x", padx=10, pady=8)
 
@@ -257,7 +253,7 @@ class StockApp(tk.Tk):
 
         style.style_buttons(btn_clear, btn_export, btn_add)
 
-        # --- Treeview ---
+        # Treeview
         columns = ('id', 'code', 'name', 'category', 'provider', 'price', 'quantity')
         self.tree = ttk.Treeview(self, columns=columns, show='headings')
         for col, text, w in zip(columns,
@@ -269,7 +265,7 @@ class StockApp(tk.Tk):
 
         style.style_treeview(self.tree)
 
-        # --- Menú contextual ---
+        #  Menú contextual 
         self.menu = tk.Menu(self, tearoff=0)
         self.menu.add_command(label='Editar', command=self.edit_selected)
         self.menu.add_command(label='Eliminar', command=self.delete_selected)
@@ -279,7 +275,7 @@ class StockApp(tk.Tk):
         self.tree.bind('<Button-3>', self.show_context_menu)
         self.tree.bind('<Double-1>', lambda e: self.edit_selected())
 
-        # --- Barra inferior ---
+        # Barra inferior 
         status = tk.Frame(self, bg="#f4f6f7")
         status.pack(fill="x")
         self.lbl_status = tk.Label(status, text="Listo", anchor="w", bg="#f4f6f7")
@@ -287,7 +283,7 @@ class StockApp(tk.Tk):
 
         self.bind("<F2>", lambda e: self.scan_barcode())
 
-    # ---------------------------- Lógica ----------------------------
+    #  Lógica 
     def clear_search(self):
         self.search_var.set('')
 
