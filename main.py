@@ -1,7 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, filedialog
 import sqlite3
-import csv
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+
 from datetime import datetime, UTC   
 import style  
 
@@ -205,11 +207,11 @@ class SaleDialog(simpledialog.Dialog):
         }
 
 
-
 # Fin de diálogos
 
 # Aplicación principal
 class StockApp(tk.Tk):
+
     def __init__(self):
         super().__init__()
         self.title('Gestión de Stock - Python')
@@ -224,6 +226,103 @@ class StockApp(tk.Tk):
         self.create_widgets()
         self.populate_products()
         self.check_low_stock()
+
+    def guardar_ventas_dia(self):
+        from datetime import datetime, timezone
+
+        # Obtener egresos y filtrar solo los de hoy
+        egresos = self.db.get_egresos()
+        hoy = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        ventas_hoy = [e for e in egresos if e[7].startswith(hoy)]
+        total_hoy = sum(e[5] or 0 for e in ventas_hoy)
+
+        if not ventas_hoy:
+            messagebox.showwarning("Sin ventas", "No hay ventas registradas para hoy.")
+            return
+
+        # Pedir archivo donde guardar
+        filename = filedialog.asksaveasfilename(
+            title="Guardar registro del día",
+            defaultextension=".xlsx",
+            initialfile=f"ventas_{hoy}.xlsx",
+            filetypes=[("Archivo Excel", "*.xlsx")]
+        )
+        if not filename:
+            return
+
+        # Crear libro y hoja
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Ventas del día"
+
+        # Estilos
+        bold = Font(bold=True)
+        center = Alignment(horizontal="center")
+        border = Border(
+            left=Side(border_style="thin"),
+            right=Side(border_style="thin"),
+            top=Side(border_style="thin"),
+            bottom=Side(border_style="thin"),
+        )
+        header_fill = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
+
+        # Título
+        ws.merge_cells("A1:H1")
+        ws["A1"] = f"REGISTRO DE VENTAS DEL DÍA - {hoy}"
+        ws["A1"].font = Font(bold=True, size=14)
+        ws["A1"].alignment = center
+
+        # Encabezados
+        headers = ["ID", "Código", "Producto", "Cantidad", "Precio Unitario ($)", "Total ($)", "Motivo", "Fecha"]
+        ws.append(headers)
+        for col in range(1, len(headers) + 1):
+            cell = ws.cell(row=2, column=col)
+            cell.font = bold
+            cell.alignment = center
+            cell.fill = header_fill
+            cell.border = border
+
+        # Filas de datos
+        for e in ventas_hoy:
+            fila = [
+                e[0],
+                e[1],
+                e[2],
+                e[3],
+                f"{e[4]:.2f}",
+                f"{e[5]:.2f}",
+                e[6],
+                e[7],
+            ]
+            ws.append(fila)
+
+        # Total al final
+        fila_total = len(ventas_hoy) + 3
+        ws[f"A{fila_total}"] = "TOTAL DEL DÍA:"
+        ws[f"A{fila_total}"].font = Font(bold=True)
+        ws[f"G{fila_total}"] = f"${total_hoy:,.2f}"
+        ws[f"G{fila_total}"].font = Font(bold=True)
+        ws[f"G{fila_total}"].alignment = center
+
+        # Ajustar ancho de columnas automáticamente
+        for col in ws.columns:
+            max_length = 0
+            # buscar la primera celda que sea de tipo normal
+            for cell in col:
+                if hasattr(cell, 'column_letter'):
+                    column = cell.column_letter
+                    break
+            else:
+                continue  # si no hay celda válida en la columna, saltar
+
+        for cell in col:
+            if hasattr(cell, 'value') and cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        ws.column_dimensions[column].width = max_length + 3
+
+        # Guardar archivo
+        wb.save(filename)
+        messagebox.showinfo("Registro guardado", f"Registro del día guardado correctamente en:\n{filename}")
 
     def create_widgets(self):
         # Menú 
@@ -393,6 +492,7 @@ class StockApp(tk.Tk):
         win.title("Historial de Egresos")
         win.geometry("900x450")
 
+        # Columnas del Treeview
         cols = ("ID", "Código", "Nombre", "Cantidad", "Precio", "Total", "Motivo", "Fecha")
         tree = ttk.Treeview(win, columns=cols, show="headings")
         for c in cols:
@@ -400,13 +500,21 @@ class StockApp(tk.Tk):
             tree.column(c, width=110, anchor="center")
         tree.pack(fill="both", expand=True, padx=10, pady=10)
 
+        # Traer egresos
         egresos = self.db.get_egresos()
         total_general = sum(e[5] or 0 for e in egresos)
         for eg in egresos:
             tree.insert("", "end", values=eg)
 
+        # Total al final en la ventana
         tk.Label(win, text=f"💰 Total vendido: ${total_general:,.2f}",
-                 font=("Arial", 11, "bold"), anchor="e").pack(fill="x", padx=10, pady=6)
+                font=("Arial", 11, "bold"), anchor="e").pack(fill="x", padx=10, pady=6)
+
+        # Botón para guardar Excel
+        tk.Button(win, text="Guardar Registro del Día",
+                command=self.guardar_ventas_dia).pack(pady=6)
+
+
 
 
 if __name__ == '__main__':
