@@ -105,13 +105,7 @@ class Database:
         c.execute('SELECT id, codigo, nombre, categoria, proveedor, precio, cantidad FROM productos WHERE id=?', (pid,))
         return c.fetchone()
 
-    def export_csv(self, filename):
-        products = self.get_all_products()
-        with open(filename, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['ID', 'Código', 'Nombre', 'Categoría', 'Proveedor', 'Precio', 'Cantidad'])
-            for p in products:
-                writer.writerow(p)
+
 
     def low_stock_products(self, threshold=LOW_STOCK_THRESHOLD):
         c = self.conn.cursor()
